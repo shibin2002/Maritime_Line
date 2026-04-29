@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import type { FreightBreakdown } from "@/lib/freight";
 import { KG_PER_CBM_EQUIVALENT, LOCAL_DOCUMENTATION_FEE_USD, USD_PER_CBM } from "@/lib/freight";
 import { formatCbm, formatUsd } from "@/lib/format";
+import { MARITIME_SHIP_ICON_PATH } from "@/lib/maritime-mark";
 import { AnimatedMoney } from "./AnimatedMoney";
 
 type Props = {
@@ -26,8 +27,13 @@ export function FreightQuoteCard({ breakdown, grossWeightKg, quoteId, quoteDate,
       <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-amber-500/10 blur-2xl" />
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-amber-600/30 bg-slate-900 text-lg font-display text-amber-400 dark:bg-slate-950">
-            ML
+          <div
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-500/40 bg-slate-900 text-amber-400 shadow-md shadow-slate-900/15 dark:border-amber-500/30 dark:bg-slate-950 dark:shadow-amber-900/15"
+            aria-hidden
+          >
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d={MARITIME_SHIP_ICON_PATH} fill="currentColor" opacity="0.92" />
+            </svg>
           </div>
           <div>
             <p id="quote-title" className="font-display text-2xl uppercase tracking-[0.12em] text-slate-900 dark:text-white">

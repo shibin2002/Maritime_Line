@@ -13,6 +13,7 @@ import { WhatIfCompare } from "@/components/freight/WhatIfCompare";
 import { freightFormSchema, type FreightFormInput, type FreightFormValues } from "@/lib/freight-schema";
 import { computeFreightEstimate, KG_PER_CBM_EQUIVALENT, LOCAL_DOCUMENTATION_FEE_USD, USD_PER_CBM } from "@/lib/freight";
 import { formatUsd, quoteRef } from "@/lib/format";
+import { MARITIME_SHIP_ICON_PATH } from "@/lib/maritime-mark";
 import { AnimatedMoney } from "@/components/freight/AnimatedMoney";
 
 const WEIGHT_MIN = 1;
@@ -93,12 +94,8 @@ export function FreightCalculator() {
             className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-500/40 bg-slate-900 text-amber-400 shadow-lg shadow-slate-900/15 dark:border-amber-500/30 dark:bg-slate-950 dark:shadow-amber-900/20"
             aria-hidden
           >
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M4 18h16v2H4v-2zm2-3h12l1-9H5l1 9zm3-11h6l1 4H8l1-4z"
-                fill="currentColor"
-                opacity="0.92"
-              />
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d={MARITIME_SHIP_ICON_PATH} fill="currentColor" opacity="0.92" />
             </svg>
           </div>
           <div className="min-w-0">

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Maritime Line">
+  <rect width="32" height="32" rx="9" fill="#0f172a"/>
+  <g fill="#fbbf24" transform="translate(4 4)">
+    <path d="M4 18h16v2H4v-2zm2-3h12l1-9H5l1 9zm3-11h6l1 4H8l1-4z" opacity="0.92"/>
+  </g>
+</svg>
