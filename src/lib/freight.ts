@@ -1,4 +1,3 @@
-/** Freight estimate constants and pure calculation (demo app). */
 export const KG_PER_CBM_EQUIVALENT = 500;
 export const USD_PER_CBM = 265;
 export const LOCAL_DOCUMENTATION_FEE_USD = 150;

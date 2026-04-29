@@ -1,95 +1,99 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  computeFreightEstimate,
-  KG_PER_CBM_EQUIVALENT,
-  LOCAL_DOCUMENTATION_FEE_USD,
-  USD_PER_CBM,
-} from "@/lib/freight";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useId, useMemo, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import { BreakdownSteps } from "@/components/freight/BreakdownSteps";
+import { FreightQuoteCard } from "@/components/freight/FreightQuoteCard";
+import { ReceiptModal } from "@/components/freight/ReceiptModal";
+import { RouteWorldMap } from "@/components/freight/RouteWorldMap";
+import { ThemeToggle } from "@/components/freight/ThemeToggle";
+import { WhatIfCompare } from "@/components/freight/WhatIfCompare";
+import { freightFormSchema, type FreightFormInput, type FreightFormValues } from "@/lib/freight-schema";
+import { computeFreightEstimate, KG_PER_CBM_EQUIVALENT, LOCAL_DOCUMENTATION_FEE_USD, USD_PER_CBM } from "@/lib/freight";
+import { formatUsd, quoteRef } from "@/lib/format";
+import { AnimatedMoney } from "@/components/freight/AnimatedMoney";
 
-function formatUsd(n: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(n);
-}
+const WEIGHT_MIN = 1;
+const WEIGHT_MAX = 50000;
+const VOLUME_MIN = 0.01;
+const VOLUME_MAX = 200;
 
-function formatCbm(n: number) {
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
-  }).format(n);
-}
-
-type FieldErrors = {
-  weight?: string;
-  volume?: string;
-};
-
-function parsePositiveNumber(raw: string): { ok: true; value: number } | { ok: false } {
-  const trimmed = raw.trim();
-  if (trimmed === "") return { ok: false };
-  const n = Number(trimmed);
-  if (!Number.isFinite(n)) return { ok: false };
-  if (n <= 0) return { ok: false };
-  return { ok: true, value: n };
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
 }
 
 export function FreightCalculator() {
-  const [weightInput, setWeightInput] = useState("");
-  const [volumeInput, setVolumeInput] = useState("");
-  const [documentation, setDocumentation] = useState(false);
-  const [touched, setTouched] = useState({ weight: false, volume: false });
-  const [submitted, setSubmitted] = useState(false);
+  const formId = useId();
+  const [whatIf, setWhatIf] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [quoteId] = useState(() => quoteRef());
 
-  const errors = useMemo((): FieldErrors => {
-    const next: FieldErrors = {};
-    const w = parsePositiveNumber(weightInput);
-    const v = parsePositiveNumber(volumeInput);
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<FreightFormInput, unknown, FreightFormValues>({
+    resolver: zodResolver(freightFormSchema),
+    mode: "onChange",
+    defaultValues: {
+      grossWeightKg: undefined,
+      volumeCbm: undefined,
+      localDocumentation: false,
+    },
+  });
 
-    const showWeight = touched.weight || submitted;
-    const showVolume = touched.volume || submitted;
+  const watched = useWatch({ control });
+  const weight = watched?.grossWeightKg;
+  const volume = watched?.volumeCbm;
+  const localDocumentation = watched?.localDocumentation ?? false;
 
-    if (showWeight) {
-      if (weightInput.trim() === "") next.weight = "Enter gross weight in kg.";
-      else if (!w.ok) next.weight = "Use a number greater than zero.";
-    }
-    if (showVolume) {
-      if (volumeInput.trim() === "") next.volume = "Enter volume in CBM.";
-      else if (!v.ok) next.volume = "Use a number greater than zero.";
-    }
-    return next;
-  }, [weightInput, volumeInput, touched, submitted]);
-
-  const weightParsed = parsePositiveNumber(weightInput);
-  const volumeParsed = parsePositiveNumber(volumeInput);
-  const isValid = weightParsed.ok && volumeParsed.ok;
+  const parsed = useMemo(() => {
+    const w = typeof weight === "number" && Number.isFinite(weight) && weight > 0;
+    const v = typeof volume === "number" && Number.isFinite(volume) && volume > 0;
+    if (!w || !v) return null;
+    return { weight: weight as number, volume: volume as number };
+  }, [weight, volume]);
 
   const breakdown = useMemo(() => {
-    const w = parsePositiveNumber(weightInput);
-    const v = parsePositiveNumber(volumeInput);
-    if (!w.ok || !v.ok) return null;
-    return computeFreightEstimate(w.value, v.value, documentation);
-  }, [weightInput, volumeInput, documentation]);
+    if (!parsed) return null;
+    return computeFreightEstimate(parsed.weight, parsed.volume, localDocumentation);
+  }, [parsed, localDocumentation]);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitted(true);
-    setTouched({ weight: true, volume: true });
-  }
+  const breakdownNoDocs = useMemo(() => {
+    if (!parsed) return null;
+    return computeFreightEstimate(parsed.weight, parsed.volume, false);
+  }, [parsed]);
+
+  const breakdownWithDocs = useMemo(() => {
+    if (!parsed) return null;
+    return computeFreightEstimate(parsed.weight, parsed.volume, true);
+  }, [parsed]);
+
+  const quoteDate = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }).format(new Date()),
+    [],
+  );
+
+  useEffect(() => {
+    if (!breakdown) setShowReceipt(false);
+  }, [breakdown]);
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-      <header className="mb-10 flex flex-col gap-6 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex items-start gap-4">
+    <div className="relative mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+      <header className="mb-10 flex flex-col gap-6 sm:mb-14 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-start">
           <div
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-md shadow-sky-900/20"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-500/40 bg-slate-900 text-amber-400 shadow-lg shadow-slate-900/15 dark:border-amber-500/30 dark:bg-slate-950 dark:shadow-amber-900/20"
             aria-hidden
           >
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
               <path
                 d="M4 18h16v2H4v-2zm2-3h12l1-9H5l1 9zm3-11h6l1 4H8l1-4z"
                 fill="currentColor"
@@ -97,243 +101,353 @@ export function FreightCalculator() {
               />
             </svg>
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-              Demo estimator
+          <div className="min-w-0">
+            <p className="font-display text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-amber-400">
+              Ocean freight desk
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
-              FreightDesk
+            <h1 className="font-display mt-2 text-4xl uppercase tracking-[0.06em] text-slate-900 dark:text-white sm:text-5xl">
+              Maritime Line
             </h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-              Quick ocean freight quote for a single lane. Numbers are illustrative only.
+            <p className="font-serif mt-3 max-w-xl text-base leading-relaxed text-slate-600 dark:text-slate-400">
+              Indicative Guangzhou → Jebel Ali estimate. Chargeable CBM, live breakdown, and export-style quote.
             </p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-zinc-200/80 bg-white/80 px-4 py-3 shadow-sm backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-900/60">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Route
-          </p>
-          <p className="mt-1 flex flex-wrap items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-100">
-            <span>Guangzhou</span>
-            <span
-              className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800 dark:bg-sky-950/80 dark:text-sky-200"
-              aria-hidden
-            >
-              →
-            </span>
-            <span>Jebel Ali</span>
-          </p>
+        <div className="flex flex-wrap items-center gap-3 lg:flex-col lg:items-end">
+          <ThemeToggle />
+          <div className="w-full min-w-[260px] rounded-2xl border border-amber-500/35 bg-white/95 px-4 py-3 text-slate-900 shadow-lg shadow-slate-900/5 backdrop-blur-md dark:border-amber-500/30 dark:bg-slate-950/80 dark:text-white dark:shadow-black/30">
+            <p className="font-display text-xs uppercase tracking-[0.25em] text-amber-700 dark:text-amber-400/90">Active lane</p>
+            <p className="font-display mt-2 flex flex-wrap items-center gap-2 text-xl tracking-wide">
+              <span>Guangzhou</span>
+              <span className="text-amber-600 dark:text-amber-400" aria-hidden>
+                →
+              </span>
+              <span>Jebel Ali</span>
+            </p>
+          </div>
         </div>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-2 lg:gap-10 lg:items-start">
+      <div className="mb-10">
+        <RouteWorldMap />
+      </div>
+
+      <form
+        id={formId}
+        className="grid gap-8 lg:grid-cols-2 lg:gap-10 lg:items-start"
+        onSubmit={handleSubmit(() => undefined)}
+        noValidate
+      >
         <section
-          className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-8"
-          aria-labelledby="estimate-heading"
+          className="flex flex-col rounded-2xl border border-slate-200/90 bg-white/95 p-6 shadow-xl shadow-slate-900/5 backdrop-blur-md dark:border-slate-700/80 dark:bg-gradient-to-b dark:from-slate-950 dark:to-[#0b1422] dark:shadow-xl dark:shadow-black/40 dark:ring-1 dark:ring-amber-500/10 sm:p-7 lg:self-start"
+          aria-labelledby="shipment-heading"
         >
-          <h2 id="estimate-heading" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <h2 id="shipment-heading" className="font-display text-2xl uppercase tracking-[0.12em] text-slate-900 dark:text-white">
             Shipment details
           </h2>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            All fields are required. Rates use chargeable CBM (max of volume vs weight equivalent).
+          <p className="font-serif mt-2 text-sm leading-snug text-slate-600 dark:text-slate-300">
+            Values validate as you type — no submit required. Rate uses max(volume CBM, weight ÷ {KG_PER_CBM_EQUIVALENT}).
           </p>
 
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
+          <div className="mt-7 flex flex-col space-y-6">
             <div>
-              <label htmlFor="weight" className="block text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              <label htmlFor={`${formId}-weight`} className="block text-sm font-medium text-slate-800 dark:text-slate-100">
                 Gross weight (kg)
               </label>
-              <input
-                id="weight"
-                name="weight"
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                placeholder="e.g. 2000"
-                value={weightInput}
-                onChange={(e) => setWeightInput(e.target.value)}
-                onBlur={() => setTouched((t) => ({ ...t, weight: true }))}
-                aria-invalid={Boolean(errors.weight)}
-                aria-describedby={errors.weight ? "weight-error" : undefined}
-                className="mt-2 block w-full rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-3 text-base text-zinc-900 outline-none ring-sky-500/40 transition placeholder:text-zinc-400 focus:border-sky-500 focus:bg-white focus:ring-4 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-100 dark:focus:bg-zinc-900"
+              <Controller
+                name="grossWeightKg"
+                control={control}
+                render={({ field }) => (
+                  <div className="mt-2 space-y-3">
+                    <input
+                      id={`${formId}-weight`}
+                      type="number"
+                      min={WEIGHT_MIN}
+                      step="any"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      placeholder="e.g. 2000"
+                      aria-invalid={Boolean(errors.grossWeightKg)}
+                      aria-describedby={errors.grossWeightKg ? `${formId}-weight-err` : `${formId}-weight-hint`}
+                      value={field.value === undefined || field.value === null ? "" : field.value}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        field.onChange(raw === "" ? undefined : parseFloat(raw));
+                      }}
+                      onBlur={field.onBlur}
+                      className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-mono text-base text-slate-900 outline-none ring-amber-500/0 transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/25 dark:border-slate-600 dark:bg-[#0d1420] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-amber-400 dark:focus:ring-amber-400/20"
+                    />
+                    <input
+                      type="range"
+                      min={WEIGHT_MIN}
+                      max={WEIGHT_MAX}
+                      step="50"
+                      aria-label="Adjust gross weight in kilograms"
+                      value={clamp(
+                        typeof field.value === "number" && Number.isFinite(field.value) ? field.value : WEIGHT_MIN,
+                        WEIGHT_MIN,
+                        WEIGHT_MAX,
+                      )}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                      className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-amber-600 dark:bg-slate-800/90 dark:accent-amber-400"
+                    />
+                  </div>
+                )}
               />
-              {errors.weight ? (
-                <p id="weight-error" className="mt-2 text-sm text-red-600 dark:text-red-400" role="alert">
-                  {errors.weight}
+              <p id={`${formId}-weight-hint`} className="mt-1.5 text-xs leading-snug text-slate-500 dark:text-slate-400">
+                Slider range {WEIGHT_MIN.toLocaleString()}–{WEIGHT_MAX.toLocaleString()} kg — you can type any valid value.
+              </p>
+              {errors.grossWeightKg ? (
+                <p id={`${formId}-weight-err`} className="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">
+                  {errors.grossWeightKg.message}
                 </p>
               ) : null}
             </div>
 
             <div>
-              <label htmlFor="volume" className="block text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              <label htmlFor={`${formId}-volume`} className="block text-sm font-medium text-slate-800 dark:text-slate-100">
                 Volume (CBM)
               </label>
-              <input
-                id="volume"
-                name="volume"
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                placeholder="e.g. 2"
-                value={volumeInput}
-                onChange={(e) => setVolumeInput(e.target.value)}
-                onBlur={() => setTouched((t) => ({ ...t, volume: true }))}
-                aria-invalid={Boolean(errors.volume)}
-                aria-describedby={errors.volume ? "volume-error" : undefined}
-                className="mt-2 block w-full rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-3 text-base text-zinc-900 outline-none ring-sky-500/40 transition placeholder:text-zinc-400 focus:border-sky-500 focus:bg-white focus:ring-4 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-100 dark:focus:bg-zinc-900"
+              <Controller
+                name="volumeCbm"
+                control={control}
+                render={({ field }) => (
+                  <div className="mt-2 space-y-3">
+                    <input
+                      id={`${formId}-volume`}
+                      type="number"
+                      min={VOLUME_MIN}
+                      step="any"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      placeholder="e.g. 2"
+                      aria-invalid={Boolean(errors.volumeCbm)}
+                      aria-describedby={errors.volumeCbm ? `${formId}-vol-err` : `${formId}-vol-hint`}
+                      value={field.value === undefined || field.value === null ? "" : field.value}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        field.onChange(raw === "" ? undefined : parseFloat(raw));
+                      }}
+                      onBlur={field.onBlur}
+                      className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-mono text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/25 dark:border-slate-600 dark:bg-[#0d1420] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-amber-400 dark:focus:ring-amber-400/20"
+                    />
+                    <input
+                      type="range"
+                      min={VOLUME_MIN}
+                      max={VOLUME_MAX}
+                      step="0.5"
+                      aria-label="Adjust volume in cubic meters"
+                      value={clamp(
+                        typeof field.value === "number" && Number.isFinite(field.value) ? field.value : VOLUME_MIN,
+                        VOLUME_MIN,
+                        VOLUME_MAX,
+                      )}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                      className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-amber-600 dark:bg-slate-800/90 dark:accent-amber-400"
+                    />
+                  </div>
+                )}
               />
-              {errors.volume ? (
-                <p id="volume-error" className="mt-2 text-sm text-red-600 dark:text-red-400" role="alert">
-                  {errors.volume}
+              <p id={`${formId}-vol-hint`} className="mt-1.5 text-xs leading-snug text-slate-500 dark:text-slate-400">
+                Slider up to {VOLUME_MAX} CBM — type larger volumes if needed.
+              </p>
+              {errors.volumeCbm ? (
+                <p id={`${formId}-vol-err`} className="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">
+                  {errors.volumeCbm.message}
                 </p>
               ) : null}
             </div>
 
-            <div className="rounded-xl border border-zinc-100 bg-zinc-50/90 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-5 dark:border-slate-600/50 dark:bg-slate-900/70 dark:shadow-inner dark:shadow-black/20">
+              <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <span id="doc-label" className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                    Local documentation needed?
+                  <span id={`${formId}-doc-label`} className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                    Local documentation
                   </span>
-                  <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                  <p className="font-serif mt-1 text-xs leading-snug text-slate-500 dark:text-slate-400">
                     Adds {formatUsd(LOCAL_DOCUMENTATION_FEE_USD)} when enabled.
                   </p>
                 </div>
+                <Controller
+                  name="localDocumentation"
+                  control={control}
+                  render={({ field }) => (
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={field.value}
+                      aria-labelledby={`${formId}-doc-label`}
+                      onClick={() => field.onChange(!field.value)}
+                      className={`relative inline-flex h-11 w-[4.25rem] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-500/40 ${
+                        field.value
+                          ? "bg-gradient-to-r from-amber-600 to-amber-500 shadow-md shadow-amber-900/25 dark:from-amber-500 dark:to-amber-400 dark:shadow-amber-900/40"
+                          : "bg-slate-300 ring-1 ring-slate-400/30 dark:bg-slate-800 dark:ring-slate-500/40"
+                      }`}
+                    >
+                      <motion.span
+                        transition={{ type: "spring", stiffness: 520, damping: 34 }}
+                        className="absolute top-1 left-1 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[10px] font-bold text-slate-600 shadow-md ring-1 ring-slate-200/80 dark:text-slate-700 dark:ring-slate-600/50"
+                        animate={{ x: field.value ? 30 : 0 }}
+                      >
+                        {field.value ? "ON" : "OFF"}
+                      </motion.span>
+                      <span className="sr-only">{field.value ? "Documentation included" : "Documentation not included"}</span>
+                    </button>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2.5 rounded-2xl border border-dashed border-amber-500/45 bg-amber-50/60 p-4 dark:border-amber-500/35 dark:bg-gradient-to-br dark:from-amber-950/50 dark:to-slate-950/80 dark:ring-1 dark:ring-amber-500/10">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span id={`${formId}-whatif`} className="font-display text-sm uppercase tracking-[0.15em] text-amber-800 dark:text-amber-300">
+                  What-if compare
+                </span>
                 <button
                   type="button"
                   role="switch"
-                  aria-checked={documentation}
-                  aria-labelledby="doc-label"
-                  onClick={() => setDocumentation((d) => !d)}
-                  className={`relative inline-flex h-9 w-[3.25rem] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-500/40 ${
-                    documentation
-                      ? "bg-sky-600 dark:bg-sky-500"
-                      : "bg-zinc-300 dark:bg-zinc-600"
+                  aria-checked={whatIf}
+                  aria-labelledby={`${formId}-whatif`}
+                  onClick={() => setWhatIf((w) => !w)}
+                  className={`relative inline-flex h-9 w-[3.25rem] shrink-0 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:focus-visible:ring-amber-400 ${
+                    whatIf
+                      ? "border-amber-600 bg-amber-500 shadow-sm shadow-amber-900/20 dark:border-amber-400 dark:bg-amber-500"
+                      : "border-slate-300 bg-slate-200 dark:border-slate-600 dark:bg-slate-800"
                   }`}
                 >
-                  <span
-                    className={`pointer-events-none inline-block h-8 w-8 translate-x-0.5 rounded-full bg-white shadow transition-transform ${
-                      documentation ? "translate-x-[1.35rem]" : "translate-x-0"
-                    }`}
+                  <motion.span
+                    layout
+                    transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                    className="absolute top-0.5 left-0.5 h-8 w-8 rounded-full bg-white shadow ring-1 ring-slate-200/80 dark:bg-slate-100 dark:ring-slate-600/40"
+                    animate={{ x: whatIf ? 26 : 0 }}
                   />
-                  <span className="sr-only">{documentation ? "Yes" : "No"}</span>
                 </button>
               </div>
-              <p className="mt-3 text-right text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                {documentation ? "Yes — fee applies" : "No"}
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Side-by-side totals: freight only vs including documentation.
               </p>
             </div>
-
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-zinc-900 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-500/40 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white sm:w-auto sm:px-8"
-            >
-              Calculate estimate
-            </button>
-          </form>
+          </div>
         </section>
 
         <section
-          className="rounded-2xl border border-zinc-200 bg-gradient-to-b from-sky-50/80 to-white p-6 shadow-sm dark:border-zinc-800 dark:from-zinc-900/80 dark:to-zinc-950 sm:p-8"
-          aria-labelledby="breakdown-heading"
+          className="relative flex flex-col rounded-2xl border border-slate-200/90 bg-white/70 p-5 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/70 sm:p-6"
+          aria-labelledby="results-heading"
         >
-          <h2 id="breakdown-heading" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Calculation breakdown
-          </h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Chargeable CBM is the higher of actual volume and weight expressed as CBM (kg ÷ {KG_PER_CBM_EQUIVALENT}).
-          </p>
-
-          {!isValid ? (
-            <div className="mt-10 rounded-xl border border-dashed border-zinc-300 bg-white/60 px-4 py-12 text-center dark:border-zinc-700 dark:bg-zinc-900/40">
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Enter valid weight and volume to see line-by-line math and totals.
+          <div className="flex shrink-0 flex-wrap items-end justify-between gap-2 sm:gap-3">
+            <div>
+              <h2 id="results-heading" className="font-display text-2xl uppercase tracking-[0.12em] text-slate-900 dark:text-white">
+                Estimate
+              </h2>
+              <p className="font-serif mt-0.5 text-sm leading-snug text-slate-600 dark:text-slate-400">
+                {formatUsd(USD_PER_CBM)} per chargeable CBM · docs {formatUsd(LOCAL_DOCUMENTATION_FEE_USD)} optional
               </p>
             </div>
-          ) : breakdown ? (
-            <div className="mt-8 space-y-6">
-              <ol className="space-y-4 text-sm">
-                <li className="flex flex-col gap-1 rounded-xl bg-white/90 px-4 py-3 shadow-sm ring-1 ring-zinc-100 dark:bg-zinc-900/70 dark:ring-zinc-800 sm:flex-row sm:items-baseline sm:justify-between">
-                  <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                    1. Weight → CBM
-                  </span>
-                  <span className="font-mono text-zinc-700 dark:text-zinc-300">
-                    {formatCbm(breakdown.weightFromKgCbm * KG_PER_CBM_EQUIVALENT)} kg ÷{" "}
-                    {KG_PER_CBM_EQUIVALENT} ={" "}
-                    <strong className="text-zinc-900 dark:text-zinc-100">
-                      {formatCbm(breakdown.weightFromKgCbm)} CBM
-                    </strong>
-                  </span>
-                </li>
-                <li className="flex flex-col gap-1 rounded-xl bg-white/90 px-4 py-3 shadow-sm ring-1 ring-zinc-100 dark:bg-zinc-900/70 dark:ring-zinc-800 sm:flex-row sm:items-baseline sm:justify-between">
-                  <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                    2. Actual volume
-                  </span>
-                  <span className="font-mono text-zinc-700 dark:text-zinc-300">
-                    <strong className="text-zinc-900 dark:text-zinc-100">
-                      {formatCbm(breakdown.actualVolumeCbm)} CBM
-                    </strong>
-                  </span>
-                </li>
-                <li className="rounded-xl bg-white/90 px-4 py-3 shadow-sm ring-1 ring-sky-200/80 dark:bg-zinc-900/70 dark:ring-sky-900/50">
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                    <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                      3. Chargeable CBM
-                    </span>
-                    <span className="font-mono text-lg font-semibold text-sky-800 dark:text-sky-200">
-                      {formatCbm(breakdown.chargeableCbm)} CBM
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-                    {breakdown.chargeableFrom === "weight"
-                      ? `Uses weight equivalent (${formatCbm(breakdown.weightFromKgCbm)} CBM) because it is greater than or equal to actual volume (${formatCbm(breakdown.actualVolumeCbm)} CBM).`
-                      : `Uses actual volume (${formatCbm(breakdown.actualVolumeCbm)} CBM) because it exceeds weight equivalent (${formatCbm(breakdown.weightFromKgCbm)} CBM).`}
-                  </p>
-                </li>
-                <li className="flex flex-col gap-1 rounded-xl bg-white/90 px-4 py-3 shadow-sm ring-1 ring-zinc-100 dark:bg-zinc-900/70 dark:ring-zinc-800 sm:flex-row sm:items-baseline sm:justify-between">
-                  <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                    4. Freight ({formatUsd(USD_PER_CBM)} / CBM)
-                  </span>
-                  <span className="font-mono text-zinc-700 dark:text-zinc-300">
-                    {formatCbm(breakdown.chargeableCbm)} × {formatUsd(USD_PER_CBM)} ={" "}
-                    <strong className="text-zinc-900 dark:text-zinc-100">
-                      {formatUsd(breakdown.freightUsd)}
-                    </strong>
-                  </span>
-                </li>
-                <li className="flex flex-col gap-1 rounded-xl bg-white/90 px-4 py-3 shadow-sm ring-1 ring-zinc-100 dark:bg-zinc-900/70 dark:ring-zinc-800 sm:flex-row sm:items-baseline sm:justify-between">
-                  <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                    5. Local documentation
-                  </span>
-                  <span className="font-mono text-zinc-700 dark:text-zinc-300">
-                    {breakdown.documentationUsd > 0 ? (
-                      <>
-                        + {formatUsd(breakdown.documentationUsd)}
-                      </>
-                    ) : (
-                      <span className="text-zinc-500 dark:text-zinc-500">Not selected</span>
-                    )}
-                  </span>
-                </li>
-              </ol>
+            <AnimatePresence>
+              {isValid && parsed ? (
+                <motion.span
+                  initial={{ scale: 0.85, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.85, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 24 }}
+                  className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300"
+                >
+                  Inputs valid
+                </motion.span>
+              ) : null}
+            </AnimatePresence>
+          </div>
 
-              <div className="rounded-2xl bg-zinc-900 px-5 py-5 text-white dark:bg-zinc-100 dark:text-zinc-900">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-600">
-                  Estimated total
-                </p>
-                <p className="mt-2 text-3xl font-semibold tracking-tight">
-                  {formatUsd(breakdown.totalUsd)}
-                </p>
-                <p className="mt-3 text-xs text-zinc-400 dark:text-zinc-600">
-                  Example: 2000 kg → 4 CBM vs 2 CBM actual → chargeable 4 CBM → freight{" "}
-                  {formatUsd(4 * USD_PER_CBM)} before optional docs.
+          <div className="relative mt-5 min-h-[280px]">
+            <div
+              className={`transition duration-500 ${!isValid || !parsed || !breakdown ? "pointer-events-none blur-sm" : ""}`}
+              aria-hidden={!isValid || !parsed || !breakdown}
+            >
+              {breakdown && parsed ? (
+                <div className="space-y-5">
+                  <AnimatePresence mode="sync">
+                    {whatIf && breakdownNoDocs && breakdownWithDocs ? (
+                      <motion.div
+                        key="whatif"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <WhatIfCompare withDocs={breakdownWithDocs} withoutDocs={breakdownNoDocs} />
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+
+                  <motion.div
+                    key={`break-${localDocumentation}`}
+                    initial={{ opacity: 0.6 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <BreakdownSteps breakdown={breakdown} grossWeightKg={parsed.weight} />
+                  </motion.div>
+
+                  <motion.div
+                    initial={false}
+                    animate={isValid ? { scale: [1, 1.02, 1] } : {}}
+                    transition={{ duration: 0.45 }}
+                    className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 px-5 py-4 text-white shadow-inner dark:from-slate-950 dark:to-slate-900"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-display text-xs uppercase tracking-[0.25em] text-amber-400/90">Estimated total</p>
+                        <p className="font-display mt-1 text-4xl tracking-wide">
+                          <AnimatedMoney value={breakdown.totalUsd} />
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowReceipt(true)}
+                        aria-haspopup="dialog"
+                        aria-expanded={showReceipt}
+                        aria-controls={`${formId}-receipt-dialog`}
+                        className="font-display shrink-0 rounded-xl border border-amber-400/45 bg-amber-500/15 px-4 py-3 text-xs uppercase tracking-[0.18em] text-amber-100 transition hover:border-amber-400/70 hover:bg-amber-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 sm:py-2.5"
+                      >
+                        View receipt
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center dark:border-slate-700">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Complete weight and volume to unlock results.</p>
+                </div>
+              )}
+            </div>
+
+            {(!isValid || !parsed || !breakdown) && (
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-slate-100/55 px-6 text-center dark:bg-slate-950/55">
+                <p className="max-w-xs text-sm font-medium text-slate-600 dark:text-slate-300">
+                  Enter valid gross weight and volume (both greater than zero) to see the animated breakdown and quote.
                 </p>
               </div>
-            </div>
-          ) : null}
+            )}
+          </div>
         </section>
-      </div>
+      </form>
+
+      {parsed && breakdown ? (
+        <ReceiptModal
+          open={showReceipt}
+          onClose={() => setShowReceipt(false)}
+          titleId={`${formId}-receipt-modal-title`}
+          dialogId={`${formId}-receipt-dialog`}
+        >
+          <FreightQuoteCard
+            embedInModal
+            breakdown={breakdown}
+            grossWeightKg={parsed.weight}
+            quoteId={quoteId}
+            quoteDate={quoteDate}
+          />
+        </ReceiptModal>
+      ) : null}
     </div>
   );
 }
