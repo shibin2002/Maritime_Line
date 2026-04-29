@@ -83,7 +83,7 @@ export function FreightCalculator() {
   );
 
   useEffect(() => {
-    if (!breakdown) setShowReceipt(false);
+    if (!breakdown) queueMicrotask(() => setShowReceipt(false));
   }, [breakdown]);
 
   return (

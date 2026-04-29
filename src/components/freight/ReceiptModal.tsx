@@ -1,8 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useHydrated } from "@/hooks/use-hydrated";
 
 type ReceiptModalProps = {
   open: boolean;
@@ -13,9 +14,7 @@ type ReceiptModalProps = {
 };
 
 export function ReceiptModal({ open, onClose, titleId, dialogId, children }: ReceiptModalProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const hydrated = useHydrated();
 
   useEffect(() => {
     if (!open) return;
@@ -35,7 +34,7 @@ export function ReceiptModal({ open, onClose, titleId, dialogId, children }: Rec
     };
   }, [open]);
 
-  if (!mounted) return null;
+  if (!hydrated) return null;
 
   return createPortal(
     <AnimatePresence>
