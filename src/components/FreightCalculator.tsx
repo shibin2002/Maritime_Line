@@ -276,16 +276,16 @@ export function FreightCalculator() {
                       aria-checked={field.value}
                       aria-labelledby={`${formId}-doc-label`}
                       onClick={() => field.onChange(!field.value)}
-                      className={`relative inline-flex h-11 w-[4.25rem] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-500/40 ${
+                      className={`relative inline-flex h-9 w-[3.25rem] shrink-0 cursor-pointer rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:focus-visible:ring-amber-400 ${
                         field.value
-                          ? "bg-gradient-to-r from-amber-600 to-amber-500 shadow-md shadow-amber-900/25 dark:from-amber-500 dark:to-amber-400 dark:shadow-amber-900/40"
-                          : "bg-slate-300 ring-1 ring-slate-400/30 dark:bg-slate-800 dark:ring-slate-500/40"
+                          ? "border-amber-600 bg-gradient-to-r from-amber-600 to-amber-500 shadow-sm shadow-amber-900/20 dark:border-amber-400 dark:from-amber-500 dark:to-amber-400"
+                          : "border-slate-300 bg-slate-200 dark:border-slate-600 dark:bg-slate-800"
                       }`}
                     >
                       <motion.span
-                        transition={{ type: "spring", stiffness: 520, damping: 34 }}
-                        className="absolute top-1 left-1 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[10px] font-bold text-slate-600 shadow-md ring-1 ring-slate-200/80 dark:text-slate-700 dark:ring-slate-600/50"
-                        animate={{ x: field.value ? 30 : 0 }}
+                        transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                        className="absolute top-0.5 left-0.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white text-[9px] font-bold leading-none text-slate-600 shadow ring-1 ring-slate-200/80 dark:bg-slate-100 dark:text-slate-700 dark:ring-slate-600/40"
+                        animate={{ x: field.value ? 26 : 0 }}
                       >
                         {field.value ? "ON" : "OFF"}
                       </motion.span>
