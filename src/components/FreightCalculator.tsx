@@ -257,8 +257,8 @@ export function FreightCalculator() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-5 dark:border-slate-600/50 dark:bg-slate-900/70 dark:shadow-inner dark:shadow-black/20">
-              <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
+              <div className="flex flex-row items-center justify-between gap-3">
+                <div className="min-w-0 flex-1 pr-2">
                   <span id={`${formId}-doc-label`} className="text-sm font-medium text-slate-800 dark:text-slate-100">
                     Local documentation
                   </span>
@@ -421,7 +421,7 @@ export function FreightCalculator() {
             {(!isValid || !parsed || !breakdown) && (
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-slate-100/55 px-6 text-center dark:bg-slate-950/55">
                 <p className="max-w-xs text-sm font-medium text-slate-600 dark:text-slate-300">
-                  Enter valid gross weight and volume (both greater than zero) to see the animated breakdown and quote.
+                  Enter valid gross weight and volume (both greater than zero)
                 </p>
               </div>
             )}
