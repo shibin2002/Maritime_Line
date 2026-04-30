@@ -150,7 +150,7 @@ export function BreakdownSteps({
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-display text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{s.title}</p>
-            <div className="mt-1 font-mono text-sm text-slate-700 dark:text-slate-300">{s.body}</div>
+            <div className="mt-1 text-sm tabular-nums text-slate-700 dark:text-slate-300">{s.body}</div>
           </div>
         </motion.li>
       ))}

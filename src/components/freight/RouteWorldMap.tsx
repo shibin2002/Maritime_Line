@@ -89,7 +89,7 @@ export function RouteWorldMap() {
       <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-200/90 pt-3 text-center text-[11px] sm:text-xs dark:border-slate-600/50">
         <div>
           <dt className="font-medium uppercase tracking-wide text-slate-500 dark:text-slate-500">Est. transit</dt>
-          <dd className="mt-0.5 font-mono font-medium text-slate-800 dark:text-slate-200">18–24 days</dd>
+          <dd className="mt-0.5 font-medium tabular-nums text-slate-800 dark:text-slate-200">18–24 days</dd>
         </div>
         <div>
           <dt className="font-medium uppercase tracking-wide text-slate-500 dark:text-slate-500">Service</dt>
@@ -97,7 +97,7 @@ export function RouteWorldMap() {
         </div>
         <div>
           <dt className="font-medium uppercase tracking-wide text-slate-500 dark:text-slate-500">Carrier window</dt>
-          <dd className="mt-0.5 font-mono font-medium text-slate-800 dark:text-slate-200">Weekly</dd>
+          <dd className="mt-0.5 font-medium tabular-nums text-slate-800 dark:text-slate-200">Weekly</dd>
         </div>
       </dl>
     </div>

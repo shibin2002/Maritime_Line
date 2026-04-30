@@ -45,11 +45,11 @@ export function FreightQuoteCard({ breakdown, grossWeightKg, quoteId, quoteDate,
         <dl className="text-right text-sm">
           <div>
             <dt className="text-slate-500">Quote no.</dt>
-            <dd className="font-mono font-medium text-slate-900 dark:text-white">{quoteId}</dd>
+            <dd className="font-medium tabular-nums text-slate-900 dark:text-white">{quoteId}</dd>
           </div>
           <div className="mt-2">
             <dt className="text-slate-500">Date</dt>
-            <dd className="font-mono text-slate-800 dark:text-slate-200">{quoteDate}</dd>
+            <dd className="tabular-nums text-slate-800 dark:text-slate-200">{quoteDate}</dd>
           </div>
         </dl>
       </div>
@@ -68,7 +68,7 @@ export function FreightQuoteCard({ breakdown, grossWeightKg, quoteId, quoteDate,
             <th className="pb-2 text-right">Amount</th>
           </tr>
         </thead>
-        <tbody className="font-mono text-slate-800 dark:text-slate-200">
+        <tbody className="tabular-nums text-slate-800 dark:text-slate-200">
           <tr className="border-b border-slate-200/80 dark:border-slate-700">
             <td className="py-2 pr-2">
               Gross weight → CBM ({formatCbm(grossWeightKg)} kg ÷ {KG_PER_CBM_EQUIVALENT})

@@ -105,7 +105,7 @@ export function FreightCalculator() {
             <h1 className="font-display mt-2 text-4xl uppercase tracking-[0.06em] text-slate-900 dark:text-white sm:text-5xl">
               Maritime Line
             </h1>
-            <p className="font-serif mt-3 max-w-xl text-base leading-relaxed text-slate-600 dark:text-slate-400">
+            <p className="mt-3 max-w-xl text-base leading-relaxed text-slate-600 dark:text-slate-400">
               Indicative Guangzhou → Jebel Ali estimate. Chargeable CBM, live breakdown, and export-style quote.
             </p>
           </div>
@@ -143,7 +143,7 @@ export function FreightCalculator() {
           <h2 id="shipment-heading" className="font-display text-2xl uppercase tracking-[0.12em] text-slate-900 dark:text-white">
             Shipment details
           </h2>
-          <p className="font-serif mt-2 text-sm leading-snug text-slate-600 dark:text-slate-300">
+          <p className="mt-2 text-sm leading-snug text-slate-600 dark:text-slate-300">
             Values validate as you type — no submit required. Rate uses max(volume CBM, weight ÷ {KG_PER_CBM_EQUIVALENT}).
           </p>
 
@@ -173,7 +173,7 @@ export function FreightCalculator() {
                         field.onChange(raw === "" ? undefined : parseFloat(raw));
                       }}
                       onBlur={field.onBlur}
-                      className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-mono text-base text-slate-900 outline-none ring-amber-500/0 transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/25 dark:border-slate-600 dark:bg-[#0d1420] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-amber-400 dark:focus:ring-amber-400/20"
+                      className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base tabular-nums text-slate-900 outline-none ring-amber-500/0 transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/25 dark:border-slate-600 dark:bg-[#0d1420] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-amber-400 dark:focus:ring-amber-400/20"
                     />
                     <input
                       type="range"
@@ -227,7 +227,7 @@ export function FreightCalculator() {
                         field.onChange(raw === "" ? undefined : parseFloat(raw));
                       }}
                       onBlur={field.onBlur}
-                      className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-mono text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/25 dark:border-slate-600 dark:bg-[#0d1420] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-amber-400 dark:focus:ring-amber-400/20"
+                      className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base tabular-nums text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/25 dark:border-slate-600 dark:bg-[#0d1420] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-amber-400 dark:focus:ring-amber-400/20"
                     />
                     <input
                       type="range"
@@ -262,7 +262,7 @@ export function FreightCalculator() {
                   <span id={`${formId}-doc-label`} className="text-sm font-medium text-slate-800 dark:text-slate-100">
                     Local documentation
                   </span>
-                  <p className="font-serif mt-1 text-xs leading-snug text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-xs leading-snug text-slate-500 dark:text-slate-400">
                     Adds {formatUsd(LOCAL_DOCUMENTATION_FEE_USD)} when enabled.
                   </p>
                 </div>
@@ -337,7 +337,7 @@ export function FreightCalculator() {
               <h2 id="results-heading" className="font-display text-2xl uppercase tracking-[0.12em] text-slate-900 dark:text-white">
                 Estimate
               </h2>
-              <p className="font-serif mt-0.5 text-sm leading-snug text-slate-600 dark:text-slate-400">
+              <p className="mt-0.5 text-sm leading-snug text-slate-600 dark:text-slate-400">
                 {formatUsd(USD_PER_CBM)} per chargeable CBM · docs {formatUsd(LOCAL_DOCUMENTATION_FEE_USD)} optional
               </p>
             </div>
